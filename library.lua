@@ -445,7 +445,7 @@ do
             BorderSizePixel = 0;
             Size = UDim2.new(0, 27, 0, 13);
             ZIndex = 5;
-            Image = 'http://www.roblox.com/asset/?id=118550110511223';
+            Image = 'http://www.roblox.com/asset/?id=123245776946814';
             Visible = not not Info.Transparency;
             Parent = DisplayFrame;
         });
@@ -508,7 +508,7 @@ do
             BorderSizePixel = 0;
             Size = UDim2.new(1, 0, 1, 0);
             ZIndex = 18;
-            Image = 'rbxassetid://130373803002028';
+            Image = 'rbxassetid://123586089664536';
             Parent = SatVibMapInner;
         });
         
@@ -516,7 +516,7 @@ do
             AnchorPoint = Vector2.new(0.5, 0.5);
             Size = UDim2.new(0, 6, 0, 6);
             BackgroundTransparency = 1;
-            Image = 'http://www.roblox.com/asset/?id=108833782820698';
+            Image = 'http://www.roblox.com/asset/?id=109767969746174';
             ImageColor3 = Color3.new(0, 0, 0);
             ZIndex = 19;
             Parent = SatVibMap;
@@ -526,7 +526,7 @@ do
             Size = UDim2.new(0, CursorOuter.Size.X.Offset - 2, 0, CursorOuter.Size.Y.Offset - 2);
             Position = UDim2.new(0, 1, 0, 1);
             BackgroundTransparency = 1;
-            Image = 'http://www.roblox.com/asset/?id=108833782820698';
+            Image = 'http://www.roblox.com/asset/?id=109767969746174';
             ZIndex = 20;
             Parent = CursorOuter;
         })
@@ -637,7 +637,7 @@ do
             Library:Create('ImageLabel', {
                 BackgroundTransparency = 1;
                 Size = UDim2.new(1, 0, 1, 0);
-                Image = 'http://www.roblox.com/asset/?id=126064857723594';
+                Image = 'http://www.roblox.com/asset/?id=84426181189295';
                 ZIndex = 20;
                 Parent = TransparencyBoxInner;
             });
@@ -2236,7 +2236,7 @@ do
             BackgroundTransparency = 1;
             Position = UDim2.new(1, -16, 0.5, 0);
             Size = UDim2.new(0, 12, 0, 12);
-            Image = 'http://www.roblox.com/asset/?id=72212652011820';
+            Image = 'http://www.roblox.com/asset/?id=79825838491558';
             ZIndex = 8;
             Parent = DropdownInner;
         });
