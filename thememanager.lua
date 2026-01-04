@@ -1,106 +1,147 @@
 local httpService = game:GetService('HttpService')
+local RunService = game:GetService('RunService')
+
 local ThemeManager = {} do
 	ThemeManager.Folder = 'LinoriaLibSettings'
-	-- if not isfolder(ThemeManager.Folder) then makefolder(ThemeManager.Folder) end
-
 	ThemeManager.Library = nil
-    ThemeManager.BuiltInThemes = {
-    ['Nothing'] = { 1, { FontColor = "ffffff", MainColor = "1c1c1c", AccentColor = "dynamic_rainbow", BackgroundColor = "141414", OutlineColor = "323232" } },
-    ['Default'] = { 2, httpService:JSONDecode('{"FontColor":"ffffff","MainColor":"1c1c1c","AccentColor":"0055ff","BackgroundColor":"141414","OutlineColor":"323232"}') },
-    }
 
+	-- ==============================
+	-- BUILT-IN THEMES (Default REMOVED)
+	-- ==============================
+	ThemeManager.BuiltInThemes = {
+		['Nothing'] = {
+			1,
+			httpService:JSONDecode('{
+				"FontColor":"ffffff",
+				"MainColor":"1c1c1c",
+				"AccentColor":"000000",
+				"BackgroundColor":"141414",
+				"OutlineColor":"323232"
+			}')
+		},
+	}
 
+	-- ==============================
+	-- RGB CYCLE STATE
+	-- ==============================
+	local AccentCycleConnection
+	local Hue = 0
+
+	local function StopAccentCycle()
+		if AccentCycleConnection then
+			AccentCycleConnection:Disconnect()
+			AccentCycleConnection = nil
+		end
+	end
+
+	local function StartAccentCycle(self)
+		StopAccentCycle()
+
+		AccentCycleConnection = RunService.RenderStepped:Connect(function(dt)
+			Hue = (Hue + dt * 0.15) % 1
+			local color = Color3.fromHSV(Hue, 1, 1)
+
+			self.Library.AccentColor = color
+			self.Library.AccentColorDark = self.Library:GetDarkerColor(color)
+
+			if Options and Options.AccentColor then
+				Options.AccentColor:SetValueRGB(color)
+			end
+
+			self.Library:UpdateColorsUsingRegistry()
+		end)
+	end
+
+	-- ==============================
+	-- APPLY THEME
+	-- ==============================
 	function ThemeManager:ApplyTheme(theme)
+		StopAccentCycle()
+
 		local customThemeData = self:GetCustomTheme(theme)
 		local data = customThemeData or self.BuiltInThemes[theme]
-
 		if not data then return end
 
-		-- custom themes are just regular dictionaries instead of an array with { index, dictionary }
-
 		local scheme = data[2]
+
 		for idx, col in next, customThemeData or scheme do
-			self.Library[idx] = Color3.fromHex(col)
-			
+			local color = Color3.fromHex(col)
+			self.Library[idx] = color
+
 			if Options[idx] then
-				Options[idx]:SetValueRGB(Color3.fromHex(col))
+				Options[idx]:SetValueRGB(color)
 			end
 		end
 
 		self:ThemeUpdate()
+
+		-- Enable RGB accent ONLY for Nothing theme
+		if theme == 'Nothing' then
+			StartAccentCycle(self)
+		end
 	end
 
-function ThemeManager:ThemeUpdate()
-    local options = { "FontColor", "MainColor", "AccentColor", "BackgroundColor", "OutlineColor" }
-    for i, field in next, options do
-        if Options and Options[field] then
-            if field == "AccentColor" and type(self.Library.AccentColor) == "function" then
-            else
-                self.Library[field] = Options[field].Value
-            end
-        end
-    end
+	-- ==============================
+	-- THEME UPDATE
+	-- ==============================
+	function ThemeManager:ThemeUpdate()
+		local options = {
+			"FontColor",
+			"MainColor",
+			"AccentColor",
+			"BackgroundColor",
+			"OutlineColor"
+		}
 
-    self.Library.AccentColorDark = self.Library:GetDarkerColor(self.Library.AccentColor)
-    self.Library:UpdateColorsUsingRegistry()
-end
-
-
+		for _, field in next, options do
+			if Options and Options[field] then
+				self.Library[field] = Options[field].Value
 			end
 		end
 
-		self.Library.AccentColorDark = self.Library:GetDarkerColor(self.Library.AccentColor);
+		self.Library.AccentColorDark =
+			self.Library:GetDarkerColor(self.Library.AccentColor)
+
 		self.Library:UpdateColorsUsingRegistry()
 	end
 
-	function ThemeManager:LoadDefault()		
+	-- ==============================
+	-- DEFAULT LOAD (Always Nothing)
+	-- ==============================
+	function ThemeManager:LoadDefault()
 		local theme = 'Nothing'
-		local content = isfile(self.Folder .. '/themes/default.txt') and readfile(self.Folder .. '/themes/default.txt')
-
-		local isDefault = true
-		if content then
-			if self.BuiltInThemes[content] then
-				theme = content
-			elseif self:GetCustomTheme(content) then
-				theme = content
-				isDefault = false;
-			end
-		elseif self.BuiltInThemes[self.DefaultTheme] then
-		 	theme = self.DefaultTheme
-		end
-
-		if isDefault then
-			Options.ThemeManager_ThemeList:SetValue(theme)
-		else
-			self:ApplyTheme(theme)
-		end
+		Options.ThemeManager_ThemeList:SetValue(theme)
 	end
 
 	function ThemeManager:SaveDefault(theme)
 		writefile(self.Folder .. '/themes/default.txt', theme)
 	end
 
+	-- ==============================
+	-- UI CREATION
+	-- ==============================
 	function ThemeManager:CreateThemeManager(groupbox)
-		groupbox:AddLabel('Background color'):AddColorPicker('BackgroundColor', { Default = self.Library.BackgroundColor });
-		groupbox:AddLabel('Main color')	:AddColorPicker('MainColor', { Default = self.Library.MainColor });
-		groupbox:AddLabel('Accent color'):AddColorPicker('AccentColor', { Default = self.Library.AccentColor });
-		groupbox:AddLabel('Outline color'):AddColorPicker('OutlineColor', { Default = self.Library.OutlineColor });
-		groupbox:AddLabel('Font color')	:AddColorPicker('FontColor', { Default = self.Library.FontColor });
+		groupbox:AddLabel('Background color'):AddColorPicker('BackgroundColor', { Default = self.Library.BackgroundColor })
+		groupbox:AddLabel('Main color'):AddColorPicker('MainColor', { Default = self.Library.MainColor })
+		groupbox:AddLabel('Accent color'):AddColorPicker('AccentColor', { Default = self.Library.AccentColor })
+		groupbox:AddLabel('Outline color'):AddColorPicker('OutlineColor', { Default = self.Library.OutlineColor })
+		groupbox:AddLabel('Font color'):AddColorPicker('FontColor', { Default = self.Library.FontColor })
 
 		local ThemesArray = {}
-		for Name, Theme in next, self.BuiltInThemes do
+		for Name in next, self.BuiltInThemes do
 			table.insert(ThemesArray, Name)
 		end
 
-		table.sort(ThemesArray, function(a, b) return self.BuiltInThemes[a][1] < self.BuiltInThemes[b][1] end)
+		table.sort(ThemesArray, function(a, b)
+			return self.BuiltInThemes[a][1] < self.BuiltInThemes[b][1]
+		end)
 
 		groupbox:AddDivider()
-		groupbox:AddDropdown('ThemeManager_ThemeList', { Text = 'Theme list', Values = ThemesArray, Default = 1 })
-
-		groupbox:AddButton('Set as default', function()
-			self:SaveDefault(Options.ThemeManager_ThemeList.Value)
-			self.Library:Notify(string.format('Set default theme to %q', Options.ThemeManager_ThemeList.Value))
-		end)
+		groupbox:AddDropdown('ThemeManager_ThemeList', {
+			Text = 'Theme list',
+			Values = ThemesArray,
+			Default = 1
+		})
 
 		Options.ThemeManager_ThemeList:OnChanged(function()
 			self:ApplyTheme(Options.ThemeManager_ThemeList.Value)
@@ -108,31 +149,23 @@ end
 
 		groupbox:AddDivider()
 		groupbox:AddInput('ThemeManager_CustomThemeName', { Text = 'Custom theme name' })
-		groupbox:AddDropdown('ThemeManager_CustomThemeList', { Text = 'Custom themes', Values = self:ReloadCustomThemes(), AllowNull = true, Default = 1 })
-		groupbox:AddDivider()
-		
-		groupbox:AddButton('Save theme', function() 
+		groupbox:AddDropdown('ThemeManager_CustomThemeList', {
+			Text = 'Custom themes',
+			Values = self:ReloadCustomThemes(),
+			AllowNull = true
+		})
+
+		groupbox:AddButton('Save theme', function()
 			self:SaveCustomTheme(Options.ThemeManager_CustomThemeName.Value)
-
-			Options.ThemeManager_CustomThemeList:SetValues(self:ReloadCustomThemes())
-			Options.ThemeManager_CustomThemeList:SetValue(nil)
-		end):AddButton('Load theme', function() 
-			self:ApplyTheme(Options.ThemeManager_CustomThemeList.Value) 
-		end)
-
-		groupbox:AddButton('Refresh list', function()
 			Options.ThemeManager_CustomThemeList:SetValues(self:ReloadCustomThemes())
 			Options.ThemeManager_CustomThemeList:SetValue(nil)
 		end)
 
-		groupbox:AddButton('Set as default', function()
-			if Options.ThemeManager_CustomThemeList.Value ~= nil and Options.ThemeManager_CustomThemeList.Value ~= '' then
-				self:SaveDefault(Options.ThemeManager_CustomThemeList.Value)
-				self.Library:Notify(string.format('Set default theme to %q', Options.ThemeManager_CustomThemeList.Value))
-			end
+		groupbox:AddButton('Load theme', function()
+			self:ApplyTheme(Options.ThemeManager_CustomThemeList.Value)
 		end)
 
-		ThemeManager:LoadDefault()
+		self:LoadDefault()
 
 		local function UpdateTheme()
 			self:ThemeUpdate()
@@ -145,18 +178,16 @@ end
 		Options.FontColor:OnChanged(UpdateTheme)
 	end
 
+	-- ==============================
+	-- FILE HANDLING (UNCHANGED)
+	-- ==============================
 	function ThemeManager:GetCustomTheme(file)
 		local path = self.Folder .. '/themes/' .. file
-		if not isfile(path) then
-			return nil
-		end
+		if not isfile(path) then return nil end
 
 		local data = readfile(path)
 		local success, decoded = pcall(httpService.JSONDecode, httpService, data)
-		
-		if not success then
-			return nil
-		end
+		if not success then return nil end
 
 		return decoded
 	end
@@ -167,34 +198,31 @@ end
 		end
 
 		local theme = {}
-		local fields = { "FontColor", "MainColor", "AccentColor", "BackgroundColor", "OutlineColor" }
+		local fields = {
+			"FontColor",
+			"MainColor",
+			"AccentColor",
+			"BackgroundColor",
+			"OutlineColor"
+		}
 
 		for _, field in next, fields do
 			theme[field] = Options[field].Value:ToHex()
 		end
 
-		writefile(self.Folder .. '/themes/' .. file .. '.json', httpService:JSONEncode(theme))
+		writefile(self.Folder .. '/themes/' .. file .. '.json',
+			httpService:JSONEncode(theme))
 	end
 
 	function ThemeManager:ReloadCustomThemes()
 		local list = listfiles(self.Folder .. '/themes')
-
 		local out = {}
-		for i = 1, #list do
-			local file = list[i]
+
+		for _, file in ipairs(list) do
 			if file:sub(-5) == '.json' then
-				-- i hate this but it has to be done ...
-
-				local pos = file:find('.json', 1, true)
-				local char = file:sub(pos, pos)
-
-				while char ~= '/' and char ~= '\\' and char ~= '' do
-					pos = pos - 1
-					char = file:sub(pos, pos)
-				end
-
-				if char == '/' or char == '\\' then
-					table.insert(out, file:sub(pos + 1))
+				local name = file:match("([^/\\]+)%.json$")
+				if name then
+					table.insert(out, name)
 				end
 			end
 		end
@@ -208,22 +236,18 @@ end
 
 	function ThemeManager:BuildFolderTree()
 		local paths = {}
-
-		-- build the entire tree if a path is like some-hub/phantom-forces
-		-- makefolder builds the entire tree on Synapse X but not other exploits
-
 		local parts = self.Folder:split('/')
-		for idx = 1, #parts do
-			paths[#paths + 1] = table.concat(parts, '/', 1, idx)
+
+		for i = 1, #parts do
+			paths[#paths + 1] = table.concat(parts, '/', 1, i)
 		end
 
 		table.insert(paths, self.Folder .. '/themes')
 		table.insert(paths, self.Folder .. '/settings')
 
-		for i = 1, #paths do
-			local str = paths[i]
-			if not isfolder(str) then
-				makefolder(str)
+		for _, path in ipairs(paths) do
+			if not isfolder(path) then
+				makefolder(path)
 			end
 		end
 	end
@@ -233,19 +257,8 @@ end
 		self:BuildFolderTree()
 	end
 
-	function ThemeManager:CreateGroupBox(tab)
-		assert(self.Library, 'Must set ThemeManager.Library first!')
-		return tab:AddLeftGroupbox('Themes')
-	end
-
 	function ThemeManager:ApplyToTab(tab)
-		assert(self.Library, 'Must set ThemeManager.Library first!')
-		local groupbox = self:CreateGroupBox(tab)
-		self:CreateThemeManager(groupbox)
-	end
-
-	function ThemeManager:ApplyToGroupbox(groupbox)
-		assert(self.Library, 'Must set ThemeManager.Library first!')
+		local groupbox = tab:AddLeftGroupbox('Themes')
 		self:CreateThemeManager(groupbox)
 	end
 
