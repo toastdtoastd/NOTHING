@@ -4,10 +4,11 @@ local ThemeManager = {} do
 	-- if not isfolder(ThemeManager.Folder) then makefolder(ThemeManager.Folder) end
 
 	ThemeManager.Library = nil
-	ThemeManager.BuiltInThemes = {
-		['Nothing'] = { 1, httpService:JSONDecode('{"FontColor":"ffffff","MainColor":"1c1c1c","AccentColor":"000000","BackgroundColor":"141414","OutlineColor":"323232"}') },
-		['Default'] = { 2, httpService:JSONDecode('{"FontColor":"ffffff","MainColor":"1c1c1c","AccentColor":"0055ff","BackgroundColor":"141414","OutlineColor":"323232"}') },
-	}
+    ThemeManager.BuiltInThemes = {
+    ['Nothing'] = { 1, { FontColor = "ffffff", MainColor = "1c1c1c", AccentColor = "dynamic_rainbow", BackgroundColor = "141414", OutlineColor = "323232" } },
+    ['Default'] = { 2, httpService:JSONDecode('{"FontColor":"ffffff","MainColor":"1c1c1c","AccentColor":"0055ff","BackgroundColor":"141414","OutlineColor":"323232"}') },
+    }
+
 
 	function ThemeManager:ApplyTheme(theme)
 		local customThemeData = self:GetCustomTheme(theme)
@@ -29,12 +30,22 @@ local ThemeManager = {} do
 		self:ThemeUpdate()
 	end
 
-	function ThemeManager:ThemeUpdate()
-		-- This allows us to force apply themes without loading the themes tab :)
-		local options = { "FontColor", "MainColor", "AccentColor", "BackgroundColor", "OutlineColor" }
-		for i, field in next, options do
-			if Options and Options[field] then
-				self.Library[field] = Options[field].Value
+function ThemeManager:ThemeUpdate()
+    local options = { "FontColor", "MainColor", "AccentColor", "BackgroundColor", "OutlineColor" }
+    for i, field in next, options do
+        if Options and Options[field] then
+            if field == "AccentColor" and type(self.Library.AccentColor) == "function" then
+            else
+                self.Library[field] = Options[field].Value
+            end
+        end
+    end
+
+    self.Library.AccentColorDark = self.Library:GetDarkerColor(self.Library.AccentColor)
+    self.Library:UpdateColorsUsingRegistry()
+end
+
+
 			end
 		end
 
