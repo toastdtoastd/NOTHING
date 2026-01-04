@@ -5,41 +5,35 @@ local ThemeManager = {} do
 	ThemeManager.Folder = 'LinoriaLibSettings'
 	ThemeManager.Library = nil
 
-	-- ==============================
-	-- BUILT-IN THEMES (Default REMOVED)
-	-- ==============================
+	-- ======================
+	-- BUILT-IN THEMES
+	-- ======================
 	ThemeManager.BuiltInThemes = {
 		['Nothing'] = {
 			1,
-			httpService:JSONDecode('{
-				"FontColor":"ffffff",
-				"MainColor":"1c1c1c",
-				"AccentColor":"000000",
-				"BackgroundColor":"141414",
-				"OutlineColor":"323232"
-			}')
+			httpService:JSONDecode('{"FontColor":"ffffff","MainColor":"1c1c1c","AccentColor":"000000","BackgroundColor":"141414","OutlineColor":"323232"}')
 		},
 	}
 
-	-- ==============================
-	-- RGB CYCLE STATE
-	-- ==============================
-	local AccentCycleConnection
-	local Hue = 0
+	-- ======================
+	-- RGB ACCENT CYCLE STATE
+	-- ======================
+	local AccentConnection
+	local AccentHue = 0
 
 	local function StopAccentCycle()
-		if AccentCycleConnection then
-			AccentCycleConnection:Disconnect()
-			AccentCycleConnection = nil
+		if AccentConnection then
+			AccentConnection:Disconnect()
+			AccentConnection = nil
 		end
 	end
 
 	local function StartAccentCycle(self)
 		StopAccentCycle()
 
-		AccentCycleConnection = RunService.RenderStepped:Connect(function(dt)
-			Hue = (Hue + dt * 0.15) % 1
-			local color = Color3.fromHSV(Hue, 1, 1)
+		AccentConnection = RunService.RenderStepped:Connect(function(dt)
+			AccentHue = (AccentHue + dt * 0.15) % 1
+			local color = Color3.fromHSV(AccentHue, 1, 1)
 
 			self.Library.AccentColor = color
 			self.Library.AccentColorDark = self.Library:GetDarkerColor(color)
@@ -52,9 +46,9 @@ local ThemeManager = {} do
 		end)
 	end
 
-	-- ==============================
+	-- ======================
 	-- APPLY THEME
-	-- ==============================
+	-- ======================
 	function ThemeManager:ApplyTheme(theme)
 		StopAccentCycle()
 
@@ -63,27 +57,26 @@ local ThemeManager = {} do
 		if not data then return end
 
 		local scheme = data[2]
-
 		for idx, col in next, customThemeData or scheme do
-			local color = Color3.fromHex(col)
-			self.Library[idx] = color
+			local c = Color3.fromHex(col)
+			self.Library[idx] = c
 
 			if Options[idx] then
-				Options[idx]:SetValueRGB(color)
+				Options[idx]:SetValueRGB(c)
 			end
 		end
 
 		self:ThemeUpdate()
 
-		-- Enable RGB accent ONLY for Nothing theme
+		-- Enable RGB cycling ONLY for Nothing
 		if theme == 'Nothing' then
 			StartAccentCycle(self)
 		end
 	end
 
-	-- ==============================
+	-- ======================
 	-- THEME UPDATE
-	-- ==============================
+	-- ======================
 	function ThemeManager:ThemeUpdate()
 		local options = {
 			"FontColor",
@@ -105,21 +98,20 @@ local ThemeManager = {} do
 		self.Library:UpdateColorsUsingRegistry()
 	end
 
-	-- ==============================
-	-- DEFAULT LOAD (Always Nothing)
-	-- ==============================
+	-- ======================
+	-- LOAD DEFAULT
+	-- ======================
 	function ThemeManager:LoadDefault()
-		local theme = 'Nothing'
-		Options.ThemeManager_ThemeList:SetValue(theme)
+		Options.ThemeManager_ThemeList:SetValue('Nothing')
 	end
 
 	function ThemeManager:SaveDefault(theme)
 		writefile(self.Folder .. '/themes/default.txt', theme)
 	end
 
-	-- ==============================
+	-- ======================
 	-- UI CREATION
-	-- ==============================
+	-- ======================
 	function ThemeManager:CreateThemeManager(groupbox)
 		groupbox:AddLabel('Background color'):AddColorPicker('BackgroundColor', { Default = self.Library.BackgroundColor })
 		groupbox:AddLabel('Main color'):AddColorPicker('MainColor', { Default = self.Library.MainColor })
@@ -165,7 +157,7 @@ local ThemeManager = {} do
 			self:ApplyTheme(Options.ThemeManager_CustomThemeList.Value)
 		end)
 
-		self:LoadDefault()
+		ThemeManager:LoadDefault()
 
 		local function UpdateTheme()
 			self:ThemeUpdate()
@@ -173,14 +165,20 @@ local ThemeManager = {} do
 
 		Options.BackgroundColor:OnChanged(UpdateTheme)
 		Options.MainColor:OnChanged(UpdateTheme)
-		Options.AccentColor:OnChanged(UpdateTheme)
 		Options.OutlineColor:OnChanged(UpdateTheme)
 		Options.FontColor:OnChanged(UpdateTheme)
+
+		-- Prevent manual AccentColor fighting RGB cycle
+		Options.AccentColor:OnChanged(function()
+			if Options.ThemeManager_ThemeList.Value ~= 'Nothing' then
+				UpdateTheme()
+			end
+		end)
 	end
 
-	-- ==============================
-	-- FILE HANDLING (UNCHANGED)
-	-- ==============================
+	-- ======================
+	-- CUSTOM THEMES
+	-- ======================
 	function ThemeManager:GetCustomTheme(file)
 		local path = self.Folder .. '/themes/' .. file
 		if not isfile(path) then return nil end
@@ -257,8 +255,19 @@ local ThemeManager = {} do
 		self:BuildFolderTree()
 	end
 
+	function ThemeManager:CreateGroupBox(tab)
+		assert(self.Library, 'Must set ThemeManager.Library first!')
+		return tab:AddLeftGroupbox('Themes')
+	end
+
 	function ThemeManager:ApplyToTab(tab)
-		local groupbox = tab:AddLeftGroupbox('Themes')
+		assert(self.Library, 'Must set ThemeManager.Library first!')
+		local groupbox = self:CreateGroupBox(tab)
+		self:CreateThemeManager(groupbox)
+	end
+
+	function ThemeManager:ApplyToGroupbox(groupbox)
+		assert(self.Library, 'Must set ThemeManager.Library first!')
 		self:CreateThemeManager(groupbox)
 	end
 
